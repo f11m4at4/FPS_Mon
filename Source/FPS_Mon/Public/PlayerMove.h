@@ -32,6 +32,11 @@ public:
 
 	void Horizontal(float value);
 	void Vertical(float value);
+	// 회전
+	void Turn(float value);
+	void LookUp(float value);
+	// 점프
+	void Jump();
 
 public:
 	// 필요속성:소유액터

@@ -32,6 +32,11 @@ void UPlayerMove::InitializeComponent()
 	me = Cast<AFPSPlayer>(GetOwner());
 	// player 에 있는 OnInputDelegate 에 처리 함수를 등록하고 싶다.
 	me->OnInputDelegate.AddUObject(this, &UPlayerMove::SetupPlayerInputComponent);
+	
+	me->bUseControllerRotationPitch = true;
+
+	// 점프가능 수
+	me->JumpMaxCount = 2;
 }
 
 // Called every frame
@@ -47,6 +52,9 @@ void UPlayerMove::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 	// 사용자의 입력을 처리할 함수 Bind
 	PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &UPlayerMove::Vertical);
 	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &UPlayerMove::Horizontal);
+	PlayerInputComponent->BindAxis(TEXT("Turn"), this, &UPlayerMove::Turn);
+	PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &UPlayerMove::LookUp);
+	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &UPlayerMove::Jump);
 }
 
 void UPlayerMove::Horizontal(float value)
@@ -65,5 +73,20 @@ void UPlayerMove::Vertical(float value)
 	FVector dir = me->GetControlRotation().Quaternion().GetForwardVector();
 
 	me->AddMovementInput(dir, value);
+}
+
+void UPlayerMove::Turn(float value)
+{
+	me->AddControllerYawInput(value);
+}
+
+void UPlayerMove::LookUp(float value)
+{
+	me->AddControllerPitchInput(value);
+}
+
+void UPlayerMove::Jump()
+{
+	me->Jump();
 }
 
