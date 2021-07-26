@@ -42,4 +42,14 @@ public:
 
 	UPROPERTY()
 	class UArrowComponent* firePosition;
+
+	UPROPERTY(EditAnywhere, Category=FireDistance)
+	float fireDistance = 1000;
+
+	UPROPERTY(EditDefaultsOnly, Category=BulletEffect)
+	class UParticleSystem* bulletEffect;
+
+	// ÃÑÀ» ½úÀ» ¶§ ºÎµúÈù ¹°Ã¼¿¡ °¡ÇÒ Èû
+	UPROPERTY(EditDefaultsOnly, Category = BulletPower)
+	float bulletPower = 100;
 };

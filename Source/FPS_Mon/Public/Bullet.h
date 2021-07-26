@@ -16,6 +16,10 @@ public:
 	ABullet();
 
 protected:
+	virtual void PreInitializeComponents() override;
+	// 액터가 갖고 있는 특정 속성을 수정한 후에 호출되는 이벤트함수
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -33,4 +37,8 @@ public:
 	// 외관 컴포넌트
 	UPROPERTY(VisibleAnywhere, Category = BodyMesh)
 	class UStaticMeshComponent* bodyMesh;
+
+	UPROPERTY(EditDefaultsOnly, Category = Speed)
+	float speed = 5000;
+
 };

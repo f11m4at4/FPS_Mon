@@ -5,6 +5,8 @@
 #include "FPSPlayer.h"
 #include <Components/ArrowComponent.h>
 #include "Bullet.h"
+#include <Kismet/GameplayStatics.h>
+#include <Camera/CameraComponent.h>
 
 // Sets default values for this component's properties
 UPlayerFire::UPlayerFire()
@@ -55,6 +57,37 @@ void UPlayerFire::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 // 사용자가 발사버튼을 누르면 총알을 발사하고 싶다.
 void UPlayerFire::Fire()
 {
-	GetWorld()->SpawnActor<ABullet>(bulletFactory, firePosition->GetComponentLocation(), firePosition->GetComponentRotation());
+	/*GetWorld()->SpawnActor<ABullet>(bulletFactory,
+	firePosition->GetComponentLocation(),
+	firePosition->GetComponentRotation());*/
+
+	// Line Trace 를 이용하여 충돌처리
+	FHitResult hitInfo;
+
+	// 카메라의 위치에서 -> 카메라가 바라보는 방향으로
+	auto fpsCam = Cast<UCameraComponent>(me->GetDefaultSubobjectByName(TEXT("FPSCamera")));
+
+	FVector start = fpsCam->GetComponentLocation();
+	FVector end = fpsCam->GetComponentLocation() + fpsCam->GetForwardVector() * fireDistance;
+
+	// 특정 액터를 충돌 검출에서 제외시키고 싶을 때
+	FCollisionQueryParams param;
+	param.AddIgnoredActor(me);
+	bool bHit = GetWorld()->LineTraceSingleByChannel(hitInfo, start, end, ECC_Visibility, param);
+
+	// Line 이 부딪혔을 때 부딪힌 지점에 파티클효과 재생
+	if (bHit)
+	{
+		FTransform trans;
+		trans.SetLocation(hitInfo.ImpactPoint);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), bulletEffect, trans);
+
+		// 만약 부딪힌 녀석이 Cube 라면 날려버리고 싶다.
+		if (hitInfo.GetActor()->GetName().Contains(TEXT("Cube")))
+		{
+			auto comp = hitInfo.GetComponent();
+			comp->AddForceAtLocation(-hitInfo.ImpactNormal * bulletPower * comp->GetMass(), hitInfo.ImpactPoint);
+		}
+	}
 }
 
