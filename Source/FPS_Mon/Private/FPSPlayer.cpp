@@ -7,6 +7,7 @@
 #include <Components/CapsuleComponent.h>
 #include <Components/SkeletalMeshComponent.h>
 #include "PlayerMove.h"
+#include "PlayerFire.h"
 
 // Sets default values
 AFPSPlayer::AFPSPlayer()
@@ -24,6 +25,7 @@ AFPSPlayer::AFPSPlayer()
 
 	// playerMove
 	playerMove = CreateDefaultSubobject<UPlayerMove>(TEXT("PlayerMove"));
+	playerFire = CreateDefaultSubobject<UPlayerFire>(TEXT("PlayerFire"));
 
 	// bodyMesh 의 SkeletalMesh 데이터 할당하기
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> tempMesh(TEXT("SkeletalMesh'/Game/FirstPerson/Character/Mesh/SK_Mannequin_Arms.SK_Mannequin_Arms'"));

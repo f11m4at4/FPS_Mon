@@ -37,7 +37,10 @@ public:
 	class USkeletalMeshComponent* bodyMesh;
 
 	UPROPERTY(VisibleAnywhere, Category = PlayerMove)
-		class UPlayerMove* playerMove;
+	class UPlayerMove* playerMove;
+
+	UPROPERTY(VisibleAnywhere, Category = PlayerFire)
+	class UPlayerFire* playerFire;
 
 	FPlayerInputDelegate OnInputDelegate;
 };
