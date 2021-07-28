@@ -6,6 +6,7 @@
 #include <Kismet/GameplayStatics.h>
 #include <EngineUtils.h>
 #include "Enemy.h"
+#include <DrawDebugHelpers.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -96,8 +97,10 @@ void UEnemyFSM::IdleState()
 	}
 }
 
-// 타겟 방향으로 이동하고 싶다.
+// 1. 타겟 방향으로 이동하고 싶다.
 // 필요속성 : 타겟, 이동속도
+// 2. 타겟과의 거리가 공격범위안에 들어오면 상태를 공격으로 바꾸고 싶다.
+// 필요속성 : 공격범위
 void UEnemyFSM::MoveState()
 {
 	// 타겟 방향으로 이동하고 싶다.
@@ -107,10 +110,35 @@ void UEnemyFSM::MoveState()
 	// 2. 방향이필요
 	// 	   direction = target - me (위치)
 	FVector direction = target->GetActorLocation() - me->GetActorLocation();
+	// 둘사이의 거리
+	float distance = direction.Size();
+
 	direction.Normalize();
 	// 3. 이동하고싶다.
 	
 	me->AddMovementInput(direction, 1);
+
+	// 이동하는 방향으로 회전하고 싶다.
+	//me->GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	// 타겟방향
+	FRotator targetRot = direction.ToOrientationRotator();
+	FRotator myRot = me->GetActorRotation();
+
+	// 부드럽게 회전하고 싶다.
+	myRot = FMath::Lerp(myRot, targetRot, 5 * GetWorld()->DeltaTimeSeconds);
+
+	me->SetActorRotation(myRot);
+
+	// 공격범위를 시각적으로 표현해보자
+	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 1, FColor::Red);
+
+	// 2. 타겟과의 거리가 공격범위안에 들어오면 상태를 공격으로 바꾸고 싶다.
+	if (distance < attackRange)
+	{
+		m_state = EEnemyState::Attack;
+	}
+
 		// P = P0 + vt
 	/*FVector P0 = me->GetActorLocation();
 	FVector p = P0 + direction * 500 * GetWorld()->DeltaTimeSeconds;

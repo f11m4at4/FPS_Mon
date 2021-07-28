@@ -53,6 +53,10 @@ public:
 	UPROPERTY()
 	class AEnemy* me;
 
+	// 필요속성 : 공격범위
+	UPROPERTY(EditAnywhere, Category=FSM)
+	float attackRange = 200;
+
 private:
 	void IdleState();
 	void MoveState();
