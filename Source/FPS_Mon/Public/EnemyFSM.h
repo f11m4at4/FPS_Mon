@@ -46,6 +46,13 @@ public:
 	UPROPERTY()
 	float currentTime = 0;
 
+	// 필요속성 : 타겟, 이동속도(Character Movement 에 있는 속성을 사용)
+	UPROPERTY(EditAnywhere, Category=Target)
+	class AFPSPlayer* target;
+
+	UPROPERTY()
+	class AEnemy* me;
+
 private:
 	void IdleState();
 	void MoveState();

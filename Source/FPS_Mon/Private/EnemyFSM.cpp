@@ -2,6 +2,10 @@
 
 
 #include "EnemyFSM.h"
+#include "FPSPlayer.h"
+#include <Kismet/GameplayStatics.h>
+#include <EngineUtils.h>
+#include "Enemy.h"
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -19,7 +23,33 @@ void UEnemyFSM::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	// 내 액터찾기
+	me = Cast<AEnemy>(GetOwner());
+
+	// 	   -> 에디터에서 할당해주기
+	// 	   -> 동적으로 타겟을 찾아야 할 필요
+	target = Cast<AFPSPlayer>(UGameplayStatics::GetActorOfClass(GetWorld(), AFPSPlayer::StaticClass()));
+
+	/*TArray<AActor*> actors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFPSPlayer::StaticClass(), actors);*/
+
+	/*for (int i=0;i<actors.Num();i++)
+	{
+		AActor* t = actors[i];
+		target = Cast<AFPSPlayer>(t);
+
+	}*/
+
+	/*for (auto t : actors)
+	{
+		target = Cast<AFPSPlayer>(t);
+		break;
+	}*/
+
+	/*for (TActorIterator<AFPSPlayer> it(GetWorld()); it; ++it)
+	{
+		target = *it;
+	}*/
 	
 }
 
@@ -66,8 +96,26 @@ void UEnemyFSM::IdleState()
 	}
 }
 
+// 타겟 방향으로 이동하고 싶다.
+// 필요속성 : 타겟, 이동속도
 void UEnemyFSM::MoveState()
 {
+	// 타겟 방향으로 이동하고 싶다.
+	// 1. 타겟이 있어야한다.
+	
+
+	// 2. 방향이필요
+	// 	   direction = target - me (위치)
+	FVector direction = target->GetActorLocation() - me->GetActorLocation();
+	direction.Normalize();
+	// 3. 이동하고싶다.
+	
+	me->AddMovementInput(direction, 1);
+		// P = P0 + vt
+	/*FVector P0 = me->GetActorLocation();
+	FVector p = P0 + direction * 500 * GetWorld()->DeltaTimeSeconds;
+
+	me->SetActorLocation(p, true);*/
 }
 
 void UEnemyFSM::AttackState()
