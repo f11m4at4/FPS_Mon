@@ -7,6 +7,7 @@
 #include <EngineUtils.h>
 #include "Enemy.h"
 #include <DrawDebugHelpers.h>
+#include "FPS_Mon.h"
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -72,9 +73,6 @@ void UEnemyFSM::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 	case EEnemyState::Attack:
 		AttackState();
 		break;
-	case EEnemyState::Damage:
-		DamageState();
-		break;
 	case EEnemyState::Die:
 		DieState();
 		break;
@@ -131,12 +129,13 @@ void UEnemyFSM::MoveState()
 	me->SetActorRotation(myRot);
 
 	// 공격범위를 시각적으로 표현해보자
-	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 1, FColor::Red);
+	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 10, FColor::Red);
 
 	// 2. 타겟과의 거리가 공격범위안에 들어오면 상태를 공격으로 바꾸고 싶다.
 	if (distance < attackRange)
 	{
 		m_state = EEnemyState::Attack;
+		currentTime = attackDelayTime;
 	}
 
 		// P = P0 + vt
@@ -146,15 +145,55 @@ void UEnemyFSM::MoveState()
 	me->SetActorLocation(p, true);*/
 }
 
+// 일정시간에 한번씩 공격하고 싶다.
+// 필요속성 : 공격대기시간
 void UEnemyFSM::AttackState()
 {
+	// 일정시간에 한번씩 공격하고 싶다.	
+	// 1. 시간이 흘렀으니까
+	currentTime += GetWorld()->DeltaTimeSeconds;
+	// 2. 공격시간이 됐으니까
+	if(currentTime > attackDelayTime)
+	{
+		// 3. 공격을 콘솔에 출력
+		PRINTLOG(TEXT("Attack!!!"));
+		currentTime = 0;
+	}
+
+	// 타겟이 도망가면 따라가고 싶다.
+	// 타겟과의 거리
+	//FVector direction = target->GetActorLocation() - me->GetActorLocation();
+	// 둘사이의 거리
+	float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
+	// -> 상태를 Move 로 전환하고 싶다.
+	// -> 타겟과의 거리가 공격범위를 벗어나면
+	if (distance > attackRange)
+	{
+		m_state = EEnemyState::Move;
+	}
 }
 
+// 일정시간이 지나면 상태를 Idle 로 바꾸고 싶다.
+// 필요속성 : 피격대기시간
 void UEnemyFSM::DamageState()
 {
+	m_state = EEnemyState::Idle;
+	currentTime = 0;
 }
 
 void UEnemyFSM::DieState()
 {
+}
+
+// 피격 받았을 때 처리할 함수
+void UEnemyFSM::OnDamageProcess()
+{
+	// 상태를 Damage 로 바꾸고 싶다.
+	m_state = EEnemyState::Damage;
+
+	// 알람맞춰놓고 시간이 다되면 상태를 Idle 로 바꾸고 싶다.
+	FTimerHandle damageTimer;
+
+	GetWorld()->GetTimerManager().SetTimer(damageTimer, this, &UEnemyFSM::DamageState, damageDelayTime, false);
 }
 

@@ -7,6 +7,8 @@
 #include "Bullet.h"
 #include <Kismet/GameplayStatics.h>
 #include <Camera/CameraComponent.h>
+#include "Enemy.h"
+#include "EnemyFSM.h"
 
 // Sets default values for this component's properties
 UPlayerFire::UPlayerFire()
@@ -73,7 +75,7 @@ void UPlayerFire::Fire()
 	// 특정 액터를 충돌 검출에서 제외시키고 싶을 때
 	FCollisionQueryParams param;
 	param.AddIgnoredActor(me);
-	bool bHit = GetWorld()->LineTraceSingleByChannel(hitInfo, start, end, ECC_Visibility, param);
+	bool bHit = GetWorld()->LineTraceSingleByChannel(hitInfo, start, end, ECC_Pawn, param);
 
 	// Line 이 부딪혔을 때 부딪힌 지점에 파티클효과 재생
 	if (bHit)
@@ -87,6 +89,15 @@ void UPlayerFire::Fire()
 		{
 			auto comp = hitInfo.GetComponent();
 			comp->AddForceAtLocation(-hitInfo.ImpactNormal * bulletPower * comp->GetMass(), hitInfo.ImpactPoint);
+		}
+
+		// 만약 부딪힌 녀석이 Enemy 라면
+		auto enemy = Cast<AEnemy>(hitInfo.GetActor());
+		if(enemy)
+		{
+			// -> 상태를 Damage 로 전환
+			//enemy->enemyFSM->m_state = EEnemyState::Damage;
+			enemy->enemyFSM->OnDamageProcess();
 		}
 	}
 }
