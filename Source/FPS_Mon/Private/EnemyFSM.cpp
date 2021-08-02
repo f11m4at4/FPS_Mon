@@ -126,9 +126,9 @@ void UEnemyFSM::MoveState()
 	{
 		ai->MoveToActor(target);
 	}
-
+	
 	//me->AddMovementInput(direction, 1);
-
+		
 	// 이동하는 방향으로 회전하고 싶다.
 	//me->GetCharacterMovement()->bOrientRotationToMovement = true;
 
