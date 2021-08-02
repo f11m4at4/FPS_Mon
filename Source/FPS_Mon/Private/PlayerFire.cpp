@@ -97,7 +97,7 @@ void UPlayerFire::Fire()
 		{
 			// -> 상태를 Damage 로 전환
 			//enemy->enemyFSM->m_state = EEnemyState::Damage;
-			enemy->enemyFSM->OnDamageProcess();
+			enemy->enemyFSM->OnDamageProcess(fpsCam->GetForwardVector());
 		}
 	}
 }

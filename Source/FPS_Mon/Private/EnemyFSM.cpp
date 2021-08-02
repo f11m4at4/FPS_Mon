@@ -8,6 +8,7 @@
 #include "Enemy.h"
 #include <DrawDebugHelpers.h>
 #include "FPS_Mon.h"
+#include <AIController.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -31,6 +32,9 @@ void UEnemyFSM::BeginPlay()
 	// 	   -> 에디터에서 할당해주기
 	// 	   -> 동적으로 타겟을 찾아야 할 필요
 	target = Cast<AFPSPlayer>(UGameplayStatics::GetActorOfClass(GetWorld(), AFPSPlayer::StaticClass()));
+
+	// AIController 할당
+	ai = Cast<AAIController>(me->GetController());
 
 	/*TArray<AActor*> actors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFPSPlayer::StaticClass(), actors);*/
@@ -73,6 +77,9 @@ void UEnemyFSM::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 	case EEnemyState::Attack:
 		AttackState();
 		break;
+	case EEnemyState::Damage:
+		DamageState();
+		break;
 	case EEnemyState::Die:
 		DieState();
 		break;
@@ -114,7 +121,13 @@ void UEnemyFSM::MoveState()
 	direction.Normalize();
 	// 3. 이동하고싶다.
 	
-	me->AddMovementInput(direction, 1);
+	// AI의 길찾기 기능을 이용해서 이동하고 싶다.
+	if (ai)
+	{
+		ai->MoveToActor(target);
+	}
+
+	//me->AddMovementInput(direction, 1);
 
 	// 이동하는 방향으로 회전하고 싶다.
 	//me->GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -126,7 +139,7 @@ void UEnemyFSM::MoveState()
 	// 부드럽게 회전하고 싶다.
 	myRot = FMath::Lerp(myRot, targetRot, 5 * GetWorld()->DeltaTimeSeconds);
 
-	me->SetActorRotation(myRot);
+	//me->SetActorRotation(myRot);
 
 	// 공격범위를 시각적으로 표현해보자
 	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 10, FColor::Red);
@@ -175,10 +188,24 @@ void UEnemyFSM::AttackState()
 
 // 일정시간이 지나면 상태를 Idle 로 바꾸고 싶다.
 // 필요속성 : 피격대기시간
+// -> 넉백이 끝나면 Idle 로 상태를 바꾸자.
 void UEnemyFSM::DamageState()
 {
-	m_state = EEnemyState::Idle;
-	currentTime = 0;
+	// Lerp 를 이용하여 knock back 구현
+	FVector myPos = me->GetActorLocation();
+
+	myPos = FMath::Lerp(myPos, knockbackPos, 20 * GetWorld()->DeltaTimeSeconds);
+
+	float distance = FVector::Dist(myPos, knockbackPos);
+	// 최종 위치와 나와의 거리가 아주 작으면 도착한것으로 판단하자
+	if (distance < 21.0f)
+	{
+		myPos = knockbackPos;
+		m_state = EEnemyState::Idle;
+		currentTime = 0;
+	}
+
+	me->SetActorLocation(myPos);
 }
 
 void UEnemyFSM::DieState()
@@ -186,14 +213,28 @@ void UEnemyFSM::DieState()
 }
 
 // 피격 받았을 때 처리할 함수
-void UEnemyFSM::OnDamageProcess()
+// 피격 받았을 때 hp 를 감소시키고 0 이하면 상태를 Die 로 바꾸고 없애버리자
+void UEnemyFSM::OnDamageProcess(FVector shootDirection)
 {
+	hp--;
+	if (hp <= 0)
+	{
+		m_state = EEnemyState::Die;
+		me->Destroy();
+		return;
+	}
+	
+	// 맞으면 뒤로 밀리도록 처리하고 싶다.
+	// 밀릴 방향이 필요
+	//me->SetActorLocation(me->GetActorLocation() + shootDirection * knockback);
+	knockbackPos = me->GetActorLocation() + shootDirection * knockback;
+
 	// 상태를 Damage 로 바꾸고 싶다.
 	m_state = EEnemyState::Damage;
 
 	// 알람맞춰놓고 시간이 다되면 상태를 Idle 로 바꾸고 싶다.
 	FTimerHandle damageTimer;
 
-	GetWorld()->GetTimerManager().SetTimer(damageTimer, this, &UEnemyFSM::DamageState, damageDelayTime, false);
+	//GetWorld()->GetTimerManager().SetTimer(damageTimer, this, &UEnemyFSM::DamageState, damageDelayTime, false);
 }
 

@@ -65,6 +65,22 @@ public:
 	UPROPERTY(EditAnywhere, Category = FSM)
 	float damageDelayTime = 2;
 
+	// hp
+	UPROPERTY(EditAnywhere, Category = FSM)
+	int hp = 3;
+
+	// Damage 받을 때 뒤로 밀릴 힘
+	UPROPERTY(EditAnywhere, Category = FSM)
+	float knockback = 500;
+
+	// Damage 받을 때 넉백 종료 지점
+	UPROPERTY()
+	FVector knockbackPos;
+
+	// Enemy 가 사용하고 있는 AIController 기억
+	UPROPERTY()
+	class AAIController* ai;
+
 private:
 	void IdleState();
 	void MoveState();
@@ -74,5 +90,5 @@ private:
 
 public:
 	// 피격 받았을 때 처리할 함수
-	void OnDamageProcess();
+	void OnDamageProcess(FVector shootDirection);
 };
