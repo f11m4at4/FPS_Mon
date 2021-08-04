@@ -11,6 +11,7 @@ UENUM(BlueprintType)
 enum class EEnemyState : uint8
 {
 	Idle,
+	Patrol,
 	Move,
 	Attack,
 	Damage,
@@ -98,6 +99,7 @@ public:
 
 private:
 	void IdleState();
+	void PatrolState();
 	void MoveState();
 	void AttackState();
 	void DamageState();

@@ -11,6 +11,7 @@
 #include <AIController.h>
 #include "EnemyAnimInstance.h"
 #include <NavigationSystem.h>
+#include <GameFramework/CharacterMovementComponent.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -78,6 +79,9 @@ void UEnemyFSM::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 	case EEnemyState::Idle:
 		IdleState();
 		break;
+	case EEnemyState::Patrol:
+		PatrolState();
+		break;
 	case EEnemyState::Move:
 		MoveState();
 		break;
@@ -103,15 +107,60 @@ void UEnemyFSM::IdleState()
 	// 2. 대기시간이 다됐으니까
 	if(currentTime > idleDelayTime)
 	{
-		// 3. 상태를 Move 로 바꿔주자.
-		m_state = EEnemyState::Move;
-
+		// 3. 상태를 Patrol 로 바꿔주자.
+		m_state = EEnemyState::Patrol;
+		me->GetCharacterMovement()->MaxWalkSpeed = 200;
 		GetTargetLocation(me, 1000, randomPos);
 
 		// 4. Animation 의 상태도 Move 로 바꿔주고 싶다.
 		// anim->isMoving = true;
 		// -> 속도가 있을 때 move 로 바꿔주자
 		currentTime = 0;
+	}
+}
+
+// 랜덤한 위치를 찾아서 돌아다닌다.
+// 단, 플레이어와의 거리가 일정 범위안에 들어오면 상태를 Move 로 바꾼다.
+void UEnemyFSM::PatrolState()
+{
+	// AI의 길찾기 기능을 이용해서 이동하고 싶다.
+	if (ai)
+	{
+		float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
+		// 단, 플레이어와의 거리가 일정 범위안에 들어오면 상태를 Move 로 바꾼다.
+		if (distance < 1000)
+		{
+			FVector pos;
+			bool result = GetTargetLocation(target, attackRange, pos);
+			if (result)
+			{
+				m_state = EEnemyState::Move;
+				me->GetCharacterMovement()->MaxWalkSpeed = 400;
+				return;
+			}
+
+			PRINTLOG(TEXT("target : %s"), result?TEXT("true"):TEXT("false"));
+		}
+
+		EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
+		// 도착했다면 다시 랜덤한 위치 설정
+		if (result == EPathFollowingRequestResult::AlreadyAtGoal)
+		{
+			GetTargetLocation(me, 1000, randomPos);
+		}
+	}
+
+	aiDebugActor->SetActorLocation(randomPos);
+
+	// 애니메이션 상태를 Move 로 전환 
+	if (anim->isMoving == false)
+	{
+		// -> 속도가 있을 때 move 로 바꿔주자
+		float velocity = me->GetVelocity().Size();
+		if (velocity > 0.1f)
+		{
+			anim->isMoving = true;
+		}
 	}
 }
 
@@ -122,67 +171,19 @@ void UEnemyFSM::IdleState()
 void UEnemyFSM::MoveState()
 {
 	// 타겟 방향으로 이동하고 싶다.
-	// 1. 타겟이 있어야한다.
-	
+	ai->MoveToActor(target);
 
-	// 2. 방향이필요
-	// 	   direction = target - me (위치)
-	FVector direction = target->GetActorLocation() - me->GetActorLocation();
-	// 둘사이의 거리
-	float distance = direction.Size();
-
-	direction.Normalize();
-	// 3. 이동하고싶다.
-	
-	// AI의 길찾기 기능을 이용해서 이동하고 싶다.
-	if (ai)
+	// 둘 사이의 거리가 일정 범위를 벗어나면?
+	float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
+	if(distance > 1000)
 	{
-		// 만약 타겟과의 거리가 nav invoker 에 설정해준 감지거리보다 작으면
-		if(distance < 1000)
-		{
-			// Player 위치 근거리에 갈 수 있는 위치를 하나 뽑자
-			GetTargetLocation(target, attackRange, randomPos);
-		}
-
-		EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
-		// 도착했다면 다시 랜덤한 위치 설정
-		if (result == EPathFollowingRequestResult::AlreadyAtGoal)
-		{
-			GetTargetLocation(me, 1000, randomPos);
-		}
-
-		PRINTLOG(TEXT("result : %d"), result);
+		// -> 상태를 다시 Patrol 바꿔주자
+		m_state = EEnemyState::Patrol;
+		GetTargetLocation(me, 1000, randomPos);
+		// -> Patrol 일때 속는 200 정도로 하자
+		me->GetCharacterMovement()->MaxWalkSpeed = 200;
+		return;
 	}
-
-	aiDebugActor->SetActorLocation(randomPos);
-
-	// 만약 속도가 0보다 크다 그리고 애니메이션이 이미 Move 상태가 아니라면
-
-	// 애니메이션 상태를 Move 로 전환 
-	if (anim->isMoving == false)
-	{
-		// -> 속도가 있을 때 move 로 바꿔주자
-		float velocity = me->GetVelocity().Size();
-		if(velocity > 0.1f)
-		{
-			anim->isMoving = true;
-		}
-	}
-
-	//me->AddMovementInput(direction, 1);
-		
-	// 이동하는 방향으로 회전하고 싶다.
-	//me->GetCharacterMovement()->bOrientRotationToMovement = true;
-
-	// 타겟방향
-	FRotator targetRot = direction.ToOrientationRotator();
-	FRotator myRot = me->GetActorRotation();
-
-	// 부드럽게 회전하고 싶다.
-	myRot = FMath::Lerp(myRot, targetRot, 5 * GetWorld()->DeltaTimeSeconds);
-
-	//me->SetActorRotation(myRot);
-
 	// 공격범위를 시각적으로 표현해보자
 	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 10, FColor::Red);
 
@@ -191,7 +192,39 @@ void UEnemyFSM::MoveState()
 	{
 		m_state = EEnemyState::Attack;
 		currentTime = attackDelayTime;
+
+		// AI 길찾기 꺼주자
+		ai->StopMovement();
 	}
+
+	// 만약 속도가 0보다 크다 그리고 애니메이션이 이미 Move 상태가 아니라면
+	// 애니메이션 상태를 Move 로 전환 
+	if (anim->isMoving == false)
+	{
+		// -> 속도가 있을 때 move 로 바꿔주자
+		float velocity = me->GetVelocity().Size();
+		if (velocity > 0.1f)
+		{
+			anim->isMoving = true;
+		}
+	}
+	
+
+	//me->AddMovementInput(direction, 1);
+		
+	// 이동하는 방향으로 회전하고 싶다.
+	//me->GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	// 타겟방향
+	//FRotator targetRot = direction.ToOrientationRotator();
+	//FRotator myRot = me->GetActorRotation();
+
+	//// 부드럽게 회전하고 싶다.
+	//myRot = FMath::Lerp(myRot, targetRot, 5 * GetWorld()->DeltaTimeSeconds);
+
+	//me->SetActorRotation(myRot);
+
+	
 
 		// P = P0 + vt
 	/*FVector P0 = me->GetActorLocation();
@@ -266,6 +299,8 @@ bool UEnemyFSM::GetTargetLocation(const AActor* targetActor, float radius, FVect
 // 피격 받았을 때 hp 를 감소시키고 0 이하면 상태를 Die 로 바꾸고 없애버리자
 void UEnemyFSM::OnDamageProcess(FVector shootDirection)
 {
+	ai->StopMovement();
+
 	hp--;
 	if (hp <= 0)
 	{
