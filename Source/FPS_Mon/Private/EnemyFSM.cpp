@@ -10,6 +10,7 @@
 #include "FPS_Mon.h"
 #include <AIController.h>
 #include "EnemyAnimInstance.h"
+#include <NavigationSystem.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -38,6 +39,9 @@ void UEnemyFSM::BeginPlay()
 	ai = Cast<AAIController>(me->GetController());
 
 	anim = Cast<UEnemyAnimInstance>(me->GetMesh()->GetAnimInstance());
+
+	// 사용할 ns 할당
+	ns = UNavigationSystemV1::GetNavigationSystem(GetWorld());
 
 	/*TArray<AActor*> actors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFPSPlayer::StaticClass(), actors);*/
@@ -102,8 +106,11 @@ void UEnemyFSM::IdleState()
 		// 3. 상태를 Move 로 바꿔주자.
 		m_state = EEnemyState::Move;
 
+		GetTargetLocation(me, 1000, randomPos);
+
 		// 4. Animation 의 상태도 Move 로 바꿔주고 싶다.
-		anim->isMoving = true;
+		// anim->isMoving = true;
+		// -> 속도가 있을 때 move 로 바꿔주자
 		currentTime = 0;
 	}
 }
@@ -130,7 +137,36 @@ void UEnemyFSM::MoveState()
 	// AI의 길찾기 기능을 이용해서 이동하고 싶다.
 	if (ai)
 	{
-		ai->MoveToActor(target);
+		// 만약 타겟과의 거리가 nav invoker 에 설정해준 감지거리보다 작으면
+		if(distance < 1000)
+		{
+			// Player 위치 근거리에 갈 수 있는 위치를 하나 뽑자
+			GetTargetLocation(target, attackRange, randomPos);
+		}
+
+		EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
+		// 도착했다면 다시 랜덤한 위치 설정
+		if (result == EPathFollowingRequestResult::AlreadyAtGoal)
+		{
+			GetTargetLocation(me, 1000, randomPos);
+		}
+
+		PRINTLOG(TEXT("result : %d"), result);
+	}
+
+	aiDebugActor->SetActorLocation(randomPos);
+
+	// 만약 속도가 0보다 크다 그리고 애니메이션이 이미 Move 상태가 아니라면
+
+	// 애니메이션 상태를 Move 로 전환 
+	if (anim->isMoving == false)
+	{
+		// -> 속도가 있을 때 move 로 바꿔주자
+		float velocity = me->GetVelocity().Size();
+		if(velocity > 0.1f)
+		{
+			anim->isMoving = true;
+		}
 	}
 
 	//me->AddMovementInput(direction, 1);
@@ -216,6 +252,14 @@ void UEnemyFSM::DamageState()
 
 void UEnemyFSM::DieState()
 {
+}
+
+bool UEnemyFSM::GetTargetLocation(const AActor* targetActor, float radius, FVector& dest)
+{
+	FNavLocation loc;
+	bool result = ns->GetRandomReachablePointInRadius(targetActor->GetActorLocation(), radius, loc);
+	dest = loc.Location;
+	return result;
 }
 
 // 피격 받았을 때 처리할 함수

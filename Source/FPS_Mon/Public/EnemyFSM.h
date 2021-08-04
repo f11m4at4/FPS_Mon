@@ -85,12 +85,26 @@ public:
 	UPROPERTY()
 	class UEnemyAnimInstance* anim;
 
+	// 랜덤으로 길찾기 할 목적지
+	UPROPERTY()
+	FVector randomPos;
+
+	UPROPERTY(EditAnywhere, Category=AI)
+	class AActor* aiDebugActor;
+
+	// 사용할 NavigationSystem 객체 등록
+	UPROPERTY()
+	class UNavigationSystemV1* ns;
+
 private:
 	void IdleState();
 	void MoveState();
 	void AttackState();
 	void DamageState();
 	void DieState();
+
+	// 파라미터로 원하는 액터를 받으면 그 액터를 기준으로 랜덤위치 알려주는 함수
+	bool GetTargetLocation(const AActor* targetActor, float radius, FVector &dest);
 
 public:
 	// 피격 받았을 때 처리할 함수
