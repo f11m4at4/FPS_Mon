@@ -130,6 +130,7 @@ void UEnemyFSM::PatrolState()
 		// 단, 플레이어와의 거리가 일정 범위안에 들어오면 상태를 Move 로 바꾼다.
 		if (distance < 1000)
 		{
+			// 내가 이동할 수 있는지 체크
 			FVector pos;
 			bool result = GetTargetLocation(target, attackRange, pos);
 			if (result)
@@ -138,8 +139,6 @@ void UEnemyFSM::PatrolState()
 				me->GetCharacterMovement()->MaxWalkSpeed = 400;
 				return;
 			}
-
-			PRINTLOG(TEXT("target : %s"), result?TEXT("true"):TEXT("false"));
 		}
 
 		EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
