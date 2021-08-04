@@ -81,6 +81,10 @@ public:
 	UPROPERTY()
 	class AAIController* ai;
 
+	// Enemy 가 사용하고 있는 Animation Instance 기억
+	UPROPERTY()
+	class UEnemyAnimInstance* anim;
+
 private:
 	void IdleState();
 	void MoveState();

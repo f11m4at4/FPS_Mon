@@ -9,6 +9,7 @@
 #include <DrawDebugHelpers.h>
 #include "FPS_Mon.h"
 #include <AIController.h>
+#include "EnemyAnimInstance.h"
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -35,6 +36,8 @@ void UEnemyFSM::BeginPlay()
 
 	// AIController 할당
 	ai = Cast<AAIController>(me->GetController());
+
+	anim = Cast<UEnemyAnimInstance>(me->GetMesh()->GetAnimInstance());
 
 	/*TArray<AActor*> actors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFPSPlayer::StaticClass(), actors);*/
@@ -98,6 +101,9 @@ void UEnemyFSM::IdleState()
 	{
 		// 3. 상태를 Move 로 바꿔주자.
 		m_state = EEnemyState::Move;
+
+		// 4. Animation 의 상태도 Move 로 바꿔주고 싶다.
+		anim->isMoving = true;
 		currentTime = 0;
 	}
 }
@@ -126,7 +132,7 @@ void UEnemyFSM::MoveState()
 	{
 		ai->MoveToActor(target);
 	}
-	
+
 	//me->AddMovementInput(direction, 1);
 		
 	// 이동하는 방향으로 회전하고 싶다.

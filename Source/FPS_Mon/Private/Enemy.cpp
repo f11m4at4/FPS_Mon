@@ -12,6 +12,14 @@ AEnemy::AEnemy()
 
 	enemyFSM = CreateDefaultSubobject<UEnemyFSM>(TEXT("EnemyFSM"));
 	
+	// Mesh 에 Animation -> ABP_Enemy 로 할당
+	ConstructorHelpers::FClassFinder<UAnimInstance> tempAnim(TEXT("AnimBlueprint'/Game/Blueprints/ABP_Enemy.ABP_Enemy_C'"));
+
+	if (tempAnim.Succeeded())
+	{
+		GetMesh()->SetAnimClass(tempAnim.Class);
+	}
+
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
