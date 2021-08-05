@@ -12,6 +12,7 @@
 #include "EnemyAnimInstance.h"
 #include <NavigationSystem.h>
 #include <GameFramework/CharacterMovementComponent.h>
+#include <NavigationInvokerComponent.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -130,15 +131,32 @@ void UEnemyFSM::PatrolState()
 		// 단, 플레이어와의 거리가 일정 범위안에 들어오면 상태를 Move 로 바꾼다.
 		if (distance < 1000)
 		{
+			FAIMoveRequest req;
+			FPathFindingQuery query;
+			FNavPathSharedPtr ptr;
+			req.SetGoalActor(target);
+			ai->FindPathForMoveRequest(req, query, ptr);
+
+			ns->FindPathSync()
+
 			// 내가 이동할 수 있는지 체크
 			FVector pos;
 			bool result = GetTargetLocation(target, attackRange, pos);
-			if (result)
+
+			UNavigationInvokerComponent* invoker = Cast<UNavigationInvokerComponent>(me->GetDefaultSubobjectByName(TEXT("NavigationInvoker")));
+			float d = invoker->GetGenerationRadius();
+			float pathcost;
+			float pathLength;
+			ns->GetPathLengthAndCost(me->GetActorLocation(), pos, pathLength, pathcost);
+
+			if (result && pathLength > 0)
 			{
 				m_state = EEnemyState::Move;
 				me->GetCharacterMovement()->MaxWalkSpeed = 400;
+				
 				return;
 			}
+
 		}
 
 		EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
@@ -170,8 +188,9 @@ void UEnemyFSM::PatrolState()
 void UEnemyFSM::MoveState()
 {
 	// 타겟 방향으로 이동하고 싶다.
-	ai->MoveToActor(target);
-
+	EPathFollowingRequestResult::Type r = ai->MoveToLocation(target->GetActorLocation());
+	//PRINTLOG(TEXT("%d, %f, pathcost : %f, pathLength : %f"), r);
+	PRINTLOG(TEXT("%d"), r);
 	// 둘 사이의 거리가 일정 범위를 벗어나면?
 	float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
 	if(distance > 1000)
