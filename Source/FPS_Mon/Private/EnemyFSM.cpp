@@ -125,23 +125,21 @@ void UEnemyFSM::IdleState()
 void UEnemyFSM::PatrolState()
 {
 	// AI의 길찾기 기능을 이용해서 이동하고 싶다.
-	if (ai)
+	// 타겟과의 거리가 1000 이내로 들어오고 움직일 수 있는 환경이라면 상태를 Move 로 전환
+	float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
+	// 단, 플레이어와의 거리가 일정 범위안에 들어오면 상태를 Move 로 바꾼다.
+	if (distance < 1000 && CanMove())
 	{
-		float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
-		// 단, 플레이어와의 거리가 일정 범위안에 들어오면 상태를 Move 로 바꾼다.
-		if (distance < 1000)
-		{
-			m_state = EEnemyState::Move;
-			me->GetCharacterMovement()->MaxWalkSpeed = 400;
-			return;
-		}
+		m_state = EEnemyState::Move;
+		me->GetCharacterMovement()->MaxWalkSpeed = 400;
+		return;
+	}
 
-		EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
-		// 도착했다면 다시 랜덤한 위치 설정
-		if (result == EPathFollowingRequestResult::AlreadyAtGoal)
-		{
-			GetTargetLocation(me, 1000, randomPos);
-		}
+	EPathFollowingRequestResult::Type result = ai->MoveToLocation(randomPos, attackRange);
+	// 도착했다면 다시 랜덤한 위치 설정
+	if (result == EPathFollowingRequestResult::AlreadyAtGoal)
+	{
+		GetTargetLocation(me, 1000, randomPos);
 	}
 
 	aiDebugActor->SetActorLocation(randomPos);
@@ -165,10 +163,10 @@ void UEnemyFSM::PatrolState()
 void UEnemyFSM::MoveState()
 {
 	// 타겟 방향으로 이동하고 싶다.
-	EPathFollowingRequestResult::Type r = ai->MoveToLocation(target->GetActorLocation());
-	// 둘 사이의 거리가 일정 범위를 벗어나면?
-	float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
-	if(distance > 1000)
+	EPathFollowingRequestResult::Type r = ai->MoveToActor(target);
+
+	// 타겟 방향으로 이동이 불가능하면 상태를 Patrol 로 바꿔주자
+	if(r == EPathFollowingRequestResult::Failed)
 	{
 		// -> 상태를 다시 Patrol 바꿔주자
 		m_state = EEnemyState::Patrol;
@@ -181,6 +179,8 @@ void UEnemyFSM::MoveState()
 	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 10, FColor::Red);
 
 	// 2. 타겟과의 거리가 공격범위안에 들어오면 상태를 공격으로 바꾸고 싶다.
+	float distance = FVector::Dist(target->GetActorLocation(), me->GetActorLocation());
+
 	if (distance < attackRange)
 	{
 		m_state = EEnemyState::Attack;
@@ -286,6 +286,31 @@ bool UEnemyFSM::GetTargetLocation(const AActor* targetActor, float radius, FVect
 	bool result = ns->GetRandomReachablePointInRadius(targetActor->GetActorLocation(), radius, loc);
 	dest = loc.Location;
 	return result;
+}
+
+// AI 가 이동할 때 최종 목적지(target) 에 갈 수 있는지 확인
+// -> AI 가 이동할 경로 데이터가 필요
+// -> 마지막 두점 위치를 표시해보자
+// -> 마지막 경로 위치에서 target 쪽으로 LineTrace 쏴서 충돌체크
+// -> target 하고 충돌이 발생하면 : 이동 가능하다
+// -> 이동할 경로 시각화 (서비스)
+bool UEnemyFSM::CanMove()
+{
+	// -> AI 가 이동할 경로 데이터가 필요
+	// 1. 이동경로 데이터 가져오기
+	FPathFindingQuery query;
+	FAIMoveRequest req;
+	req.SetAcceptanceRadius(3);
+	req.SetGoalActor(target);
+	ai->BuildPathfindingQuery(req ,query);
+	FPathFindingResult result = ns->FindPathSync(query);
+
+	TArray<FNavPathPoint> points = result.Path->GetPathPoints();
+	int32 num = points.Num();
+
+	PRINTLOG(TEXT("Path Num : %d"), num);
+
+	return false;
 }
 
 // 피격 받았을 때 처리할 함수

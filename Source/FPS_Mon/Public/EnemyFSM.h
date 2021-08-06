@@ -98,6 +98,7 @@ public:
 	class UNavigationSystemV1* ns;
 
 private:
+#pragma region stateFunction
 	void IdleState();
 	void PatrolState();
 	void MoveState();
@@ -108,6 +109,9 @@ private:
 	// 파라미터로 원하는 액터를 받으면 그 액터를 기준으로 랜덤위치 알려주는 함수
 	bool GetTargetLocation(const AActor* targetActor, float radius, FVector &dest);
 
+	// 움직일 수 있는 상태인지 체크
+	bool CanMove();
+#pragma endregion
 public:
 	// 피격 받았을 때 처리할 함수
 	void OnDamageProcess(FVector shootDirection);
