@@ -162,6 +162,8 @@ void UEnemyFSM::PatrolState()
 // 필요속성 : 공격범위
 void UEnemyFSM::MoveState()
 {
+	CanMove();
+
 	// 타겟 방향으로 이동하고 싶다.
 	EPathFollowingRequestResult::Type r = ai->MoveToActor(target);
 
@@ -309,6 +311,62 @@ bool UEnemyFSM::CanMove()
 	int32 num = points.Num();
 
 	PRINTLOG(TEXT("Path Num : %d"), num);
+
+	// -> 마지막 (경로들)두점 위치를 표시해보자
+	// 1. 경로가 하나라도 있을 때
+	if(num > 1)
+	{
+		for(int i=0;i<pathActors.Num();i++)
+		{
+			// 2. 몇번째 경로인지 알아야한다.
+			// 배열의 시작은 0부터 시작한다. 크기가 n 일때 마지막 원소는 n - 1이된다.
+			int32 index = num - (i + 1);
+			// path 갯수보다 등록된 pathActors 의 갯수가 더 많을 때
+			if (index < 0)
+			{
+				break;
+			}
+
+			// 3. 경로의 위치에 물체를 배치하자
+			pathActors[i]->SetActorLocation(points[index].Location);
+		}
+	}
+
+	// -> 이동할 경로 시각화 (서비스) : 선을 그려보자
+	for (int i = 1;i<num;i++)
+	{
+		FVector point1 = points[i - 1].Location;
+		FVector point2 = points[i].Location;
+
+		DrawDebugLine(GetWorld(), point1, point2, FColor::Red, false, 0.1f, 10, 5);
+	}
+
+
+
+
+	// -> 마지막 경로 위치에서 target 쪽으로 LineTrace 쏴서 충돌체크
+	// -> target 하고 충돌이 발생하면 : 이동 가능하다
+	if (num > 0)
+	{
+		// -> 마지막 경로 위치에서 target 쪽으로 LineTrace 쏴서 충돌체크
+		// 1. 시작점 필요
+		FVector startPoint = points[num - 1].Location;
+		// 2. 끝점이 필요
+		FVector endPoint = target->GetActorLocation();
+		// 3. 나(Enemy)는 충돌 무시해라
+		FCollisionQueryParams param;
+		param.AddIgnoredActor(me);
+		// 4. LineTrace 쏴서 충돌체크
+		FHitResult hitInfo;
+		bool r = GetWorld()->LineTraceSingleByChannel(hitInfo, startPoint, endPoint, ECC_WorldStatic, param);
+
+		// -> target 하고 충돌이 발생하면 : 이동 가능하다 true 반환
+		if (r && hitInfo.GetActor() == target)
+		{
+			return true;
+		}
+	}
+
 
 	return false;
 }

@@ -93,6 +93,10 @@ public:
 	UPROPERTY(EditAnywhere, Category=AI)
 	class AActor* aiDebugActor;
 
+	// 경로표시할 객체들 담을 변수
+	UPROPERTY(EditAnywhere, Category = AI)
+	TArray<AActor*> pathActors;
+
 	// 사용할 NavigationSystem 객체 등록
 	UPROPERTY()
 	class UNavigationSystemV1* ns;
