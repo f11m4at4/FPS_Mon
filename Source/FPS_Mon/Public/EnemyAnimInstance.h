@@ -15,6 +15,9 @@ class FPS_MON_API UEnemyAnimInstance : public UAnimInstance
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(VisibleAnywhere, Category=FSM, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, Category=FSM, BlueprintReadOnly)
 	bool isMoving = false;
+
+	UPROPERTY(EditAnywhere, Category = FSM, BlueprintReadOnly)
+	bool isPatrol = false;
 };

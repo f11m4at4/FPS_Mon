@@ -110,11 +110,13 @@ void UEnemyFSM::IdleState()
 	{
 		// 3. 상태를 Patrol 로 바꿔주자.
 		m_state = EEnemyState::Patrol;
+		// 4. Animation 의 상태도 Patrol 로 바꿔주고 싶다.
+		anim->isPatrol = true;
+		anim->isMoving = false;
+
 		me->GetCharacterMovement()->MaxWalkSpeed = 200;
 		GetTargetLocation(me, 1000, randomPos);
 
-		// 4. Animation 의 상태도 Move 로 바꿔주고 싶다.
-		// anim->isMoving = true;
 		// -> 속도가 있을 때 move 로 바꿔주자
 		currentTime = 0;
 	}
@@ -132,6 +134,9 @@ void UEnemyFSM::PatrolState()
 	{
 		m_state = EEnemyState::Move;
 		me->GetCharacterMovement()->MaxWalkSpeed = 400;
+
+		anim->isPatrol = false;
+		anim->isMoving = true;
 		return;
 	}
 
@@ -144,16 +149,6 @@ void UEnemyFSM::PatrolState()
 
 	aiDebugActor->SetActorLocation(randomPos);
 
-	// 애니메이션 상태를 Move 로 전환 
-	if (anim->isMoving == false)
-	{
-		// -> 속도가 있을 때 move 로 바꿔주자
-		float velocity = me->GetVelocity().Size();
-		if (velocity > 0.1f)
-		{
-			anim->isMoving = true;
-		}
-	}
 }
 
 // 1. 타겟 방향으로 이동하고 싶다.
@@ -175,8 +170,12 @@ void UEnemyFSM::MoveState()
 		GetTargetLocation(me, 1000, randomPos);
 		// -> Patrol 일때 속는 200 정도로 하자
 		me->GetCharacterMovement()->MaxWalkSpeed = 200;
+
+		anim->isPatrol = true;
+		anim->isMoving = false;
 		return;
 	}
+	
 	// 공격범위를 시각적으로 표현해보자
 	DrawDebugSphere(GetWorld(), me->GetActorLocation(), attackRange, 10, FColor::Red);
 
@@ -191,41 +190,6 @@ void UEnemyFSM::MoveState()
 		// AI 길찾기 꺼주자
 		ai->StopMovement();
 	}
-
-	// 만약 속도가 0보다 크다 그리고 애니메이션이 이미 Move 상태가 아니라면
-	// 애니메이션 상태를 Move 로 전환 
-	if (anim->isMoving == false)
-	{
-		// -> 속도가 있을 때 move 로 바꿔주자
-		float velocity = me->GetVelocity().Size();
-		if (velocity > 0.1f)
-		{
-			anim->isMoving = true;
-		}
-	}
-	
-
-	//me->AddMovementInput(direction, 1);
-		
-	// 이동하는 방향으로 회전하고 싶다.
-	//me->GetCharacterMovement()->bOrientRotationToMovement = true;
-
-	// 타겟방향
-	//FRotator targetRot = direction.ToOrientationRotator();
-	//FRotator myRot = me->GetActorRotation();
-
-	//// 부드럽게 회전하고 싶다.
-	//myRot = FMath::Lerp(myRot, targetRot, 5 * GetWorld()->DeltaTimeSeconds);
-
-	//me->SetActorRotation(myRot);
-
-	
-
-		// P = P0 + vt
-	/*FVector P0 = me->GetActorLocation();
-	FVector p = P0 + direction * 500 * GetWorld()->DeltaTimeSeconds;
-
-	me->SetActorLocation(p, true);*/
 }
 
 // 일정시간에 한번씩 공격하고 싶다.
