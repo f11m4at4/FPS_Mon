@@ -45,6 +45,9 @@ void UEnemyFSM::BeginPlay()
 	// 사용할 ns 할당
 	ns = UNavigationSystemV1::GetNavigationSystem(GetWorld());
 
+
+	anim->state = m_state;
+
 	/*TArray<AActor*> actors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFPSPlayer::StaticClass(), actors);*/
 
@@ -111,8 +114,7 @@ void UEnemyFSM::IdleState()
 		// 3. 상태를 Patrol 로 바꿔주자.
 		m_state = EEnemyState::Patrol;
 		// 4. Animation 의 상태도 Patrol 로 바꿔주고 싶다.
-		anim->isPatrol = true;
-		anim->isMoving = false;
+		anim->state = m_state;
 
 		me->GetCharacterMovement()->MaxWalkSpeed = 200;
 		GetTargetLocation(me, 1000, randomPos);
@@ -135,8 +137,7 @@ void UEnemyFSM::PatrolState()
 		m_state = EEnemyState::Move;
 		me->GetCharacterMovement()->MaxWalkSpeed = 400;
 
-		anim->isPatrol = false;
-		anim->isMoving = true;
+		anim->state = m_state;
 		return;
 	}
 
@@ -171,8 +172,7 @@ void UEnemyFSM::MoveState()
 		// -> Patrol 일때 속는 200 정도로 하자
 		me->GetCharacterMovement()->MaxWalkSpeed = 200;
 
-		anim->isPatrol = true;
-		anim->isMoving = false;
+		anim->state = m_state;
 		return;
 	}
 	
@@ -340,22 +340,27 @@ bool UEnemyFSM::CanMove()
 void UEnemyFSM::OnDamageProcess(FVector shootDirection)
 {
 	ai->StopMovement();
+	// 맞았을 때 상대를 바라보도록 하자
+	me->SetActorRotation((-shootDirection).ToOrientationRotator());
 
 	hp--;
 	if (hp <= 0)
 	{
 		m_state = EEnemyState::Die;
-		me->Destroy();
+		anim->Die();
 		return;
 	}
 	
 	// 맞으면 뒤로 밀리도록 처리하고 싶다.
 	// 밀릴 방향이 필요
 	//me->SetActorLocation(me->GetActorLocation() + shootDirection * knockback);
+	shootDirection.Z = 0;
 	knockbackPos = me->GetActorLocation() + shootDirection * knockback;
 
 	// 상태를 Damage 로 바꾸고 싶다.
 	m_state = EEnemyState::Damage;
+
+	anim->Hit();
 
 	// 알람맞춰놓고 시간이 다되면 상태를 Idle 로 바꾸고 싶다.
 	FTimerHandle damageTimer;
