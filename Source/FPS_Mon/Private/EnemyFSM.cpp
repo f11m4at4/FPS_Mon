@@ -13,6 +13,7 @@
 #include <NavigationSystem.h>
 #include <GameFramework/CharacterMovementComponent.h>
 #include <NavigationInvokerComponent.h>
+#include <Animation/AnimNode_StateMachine.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -89,6 +90,7 @@ void UEnemyFSM::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 	case EEnemyState::Move:
 		MoveState();
 		break;
+	case EEnemyState::AttackDelay:
 	case EEnemyState::Attack:
 		AttackState();
 		break;
@@ -160,6 +162,15 @@ void UEnemyFSM::MoveState()
 {
 	CanMove();
 
+	// 만약 애니메이션이 Attack 을 플레이하고 있으면???
+	// 아래 내용은 진행하지 않는다.
+	int32 index = anim->GetStateMachineIndex(TEXT("FSM"));
+	FAnimNode_StateMachine* sm = anim->GetStateMachineInstance(index);
+	if (sm->GetCurrentStateName() == TEXT("Attack"))
+	{
+		return;
+	}
+
 	// 타겟 방향으로 이동하고 싶다.
 	EPathFollowingRequestResult::Type r = ai->MoveToActor(target);
 
@@ -184,8 +195,9 @@ void UEnemyFSM::MoveState()
 
 	if (distance < attackRange)
 	{
-		m_state = EEnemyState::Attack;
+		m_state = EEnemyState::AttackDelay;
 		currentTime = attackDelayTime;
+		anim->state = m_state;
 
 		// AI 길찾기 꺼주자
 		ai->StopMovement();
@@ -196,6 +208,8 @@ void UEnemyFSM::MoveState()
 // 필요속성 : 공격대기시간
 void UEnemyFSM::AttackState()
 {
+	m_state = EEnemyState::AttackDelay;
+	anim->state = m_state;
 	// 일정시간에 한번씩 공격하고 싶다.	
 	// 1. 시간이 흘렀으니까
 	currentTime += GetWorld()->DeltaTimeSeconds;
@@ -205,6 +219,9 @@ void UEnemyFSM::AttackState()
 		// 3. 공격을 콘솔에 출력
 		PRINTLOG(TEXT("Attack!!!"));
 		currentTime = 0;
+		m_state = EEnemyState::Attack;
+		anim->state = m_state;
+
 	}
 
 	// 타겟이 도망가면 따라가고 싶다.
@@ -217,6 +234,7 @@ void UEnemyFSM::AttackState()
 	if (distance > attackRange)
 	{
 		m_state = EEnemyState::Move;
+		anim->state = m_state;
 	}
 }
 
