@@ -59,6 +59,9 @@ void UPlayerFire::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 // 사용자가 발사버튼을 누르면 총알을 발사하고 싶다.
 void UPlayerFire::Fire()
 {
+	// 카메라 흔들리도록 처리
+	GetWorld()->GetFirstPlayerController()->PlayerCameraManager->StartCameraShake(cameraShake);
+
 	/*GetWorld()->SpawnActor<ABullet>(bulletFactory,
 	firePosition->GetComponentLocation(),
 	firePosition->GetComponentRotation());*/

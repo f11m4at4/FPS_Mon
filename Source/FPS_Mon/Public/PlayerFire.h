@@ -31,6 +31,9 @@ public:
 
 	void Fire();
 
+	UPROPERTY(EditDefaultsOnly, Category = CameraShake)
+	TSubclassOf<class UCameraShakeBase> cameraShake;
+
 public:
 	// 필요속성 : 총알공장
 	UPROPERTY(EditDefaultsOnly, Category=BulletFactory)
