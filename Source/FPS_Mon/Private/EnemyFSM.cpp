@@ -14,6 +14,7 @@
 #include <GameFramework/CharacterMovementComponent.h>
 #include <NavigationInvokerComponent.h>
 #include <Animation/AnimNode_StateMachine.h>
+#include <Components/CapsuleComponent.h>
 
 // Sets default values for this component's properties
 UEnemyFSM::UEnemyFSM()
@@ -150,7 +151,7 @@ void UEnemyFSM::PatrolState()
 		GetTargetLocation(me, 1000, randomPos);
 	}
 
-	aiDebugActor->SetActorLocation(randomPos);
+	//aiDebugActor->SetActorLocation(randomPos);
 
 }
 
@@ -223,6 +224,11 @@ void UEnemyFSM::AttackState()
 		anim->state = m_state;
 
 	}
+	
+	// 공격 상대를 바라보고 싶다.
+	FVector direction = target->GetActorLocation() - me->GetActorLocation();
+	direction.Normalize();
+	me->SetActorRotation(direction.ToOrientationRotator());
 
 	// 타겟이 도망가면 따라가고 싶다.
 	// 타겟과의 거리
@@ -296,23 +302,23 @@ bool UEnemyFSM::CanMove()
 
 	// -> 마지막 (경로들)두점 위치를 표시해보자
 	// 1. 경로가 하나라도 있을 때
-	if(num > 1)
-	{
-		for(int i=0;i<pathActors.Num();i++)
-		{
-			// 2. 몇번째 경로인지 알아야한다.
-			// 배열의 시작은 0부터 시작한다. 크기가 n 일때 마지막 원소는 n - 1이된다.
-			int32 index = num - (i + 1);
-			// path 갯수보다 등록된 pathActors 의 갯수가 더 많을 때
-			if (index < 0)
-			{
-				break;
-			}
+	//if(num > 1)
+	//{
+	//	for(int i=0;i<pathActors.Num();i++)
+	//	{
+	//		// 2. 몇번째 경로인지 알아야한다.
+	//		// 배열의 시작은 0부터 시작한다. 크기가 n 일때 마지막 원소는 n - 1이된다.
+	//		int32 index = num - (i + 1);
+	//		// path 갯수보다 등록된 pathActors 의 갯수가 더 많을 때
+	//		if (index < 0)
+	//		{
+	//			break;
+	//		}
 
-			// 3. 경로의 위치에 물체를 배치하자
-			pathActors[i]->SetActorLocation(points[index].Location);
-		}
-	}
+	//		// 3. 경로의 위치에 물체를 배치하자
+	//		pathActors[i]->SetActorLocation(points[index].Location);
+	//	}
+	//}
 
 	// -> 이동할 경로 시각화 (서비스) : 선을 그려보자
 	for (int i = 1;i<num;i++)
@@ -357,6 +363,14 @@ bool UEnemyFSM::CanMove()
 // 피격 받았을 때 hp 를 감소시키고 0 이하면 상태를 Die 로 바꾸고 없애버리자
 void UEnemyFSM::OnDamageProcess(FVector shootDirection)
 {
+	// 만약 hp 가 0 이하면 => Die
+	// 아래 내용은 수행하지 않는다.
+	if (m_state == EEnemyState::Die)
+	{
+		return;
+	}
+
+
 	ai->StopMovement();
 	// 맞았을 때 상대를 바라보도록 하자
 	me->SetActorRotation((-shootDirection).ToOrientationRotator());
@@ -366,6 +380,9 @@ void UEnemyFSM::OnDamageProcess(FVector shootDirection)
 	{
 		m_state = EEnemyState::Die;
 		anim->Die();
+		// 충돌체는 다 꺼주자
+		me->GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		me->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		return;
 	}
 	
